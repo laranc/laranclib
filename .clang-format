@@ -1,0 +1,8 @@
+UseTab: Always
+IndentWidth: 4
+TabWidth: 4
+AlignConsecutiveMacros: AcrossEmptyLinesAndComments
+SpaceBeforeParens: Custom
+SpaceBeforeParensOptions:
+  AfterControlStatements: true
+  AfterPlacementOperator: false
