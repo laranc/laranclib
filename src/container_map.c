@@ -1,9 +1,9 @@
 #include <string.h>
 
 #include "container/map.h"
-#include "container/string.h"
 
-Map mapNew(Allocator allocator, MapHashFn hash_fn, MapKeyCmp key_eq) {
+Map mapNew(Allocator allocator, MapHashFn hash_fn, Object key_obj,
+		   Object data_obj) {
 	_MapBucket **base = new(allocator, _MapBucket *, MAP_INIT_SIZE);
 	memset(base, 0, sizeof(_MapBucket *));
 	return (Map){
@@ -11,17 +11,18 @@ Map mapNew(Allocator allocator, MapHashFn hash_fn, MapKeyCmp key_eq) {
 		.len = MAP_INIT_SIZE,
 		.collisions = 0,
 		.hash_fn = hash_fn,
-		.key_eq = key_eq,
+		.key_obj = key_obj,
+		.data_obj = data_obj,
 	};
 }
 
-void mapInsert(Allocator allocator, Map *map, void *key, usize key_size,
-			   void *data) {
-	usize hash = map->hash_fn(key, key_size);
+void mapInsert(Allocator allocator, Map *map, const void *key,
+			   const void *data) {
+	usize hash = map->hash_fn(key, map->key_obj.size());
 	usize idx = hash % map->len;
 	_MapBucket *bucket = new(allocator, _MapBucket, 1);
-	bucket->key = key;
-	bucket->data = data;
+	bucket->key = map->key_obj.clone(allocator, key);
+	bucket->data = map->data_obj.clone(allocator, data);
 	bucket->next = NULL;
 	if ((f32)map->collisions > (f32)map->len * MAP_COLLISION_FACTOR) {
 		map->len *= 2;
@@ -41,24 +42,25 @@ void mapInsert(Allocator allocator, Map *map, void *key, usize key_size,
 	curr->next = bucket;
 }
 
-void *mapGet(Map map, void *key, usize size) {
-	usize idx = map.hash_fn(key, size) % map.len;
+void *mapGet(Map map, const void *key) {
+	usize idx = map.hash_fn(key, map.key_obj.size()) % map.len;
 	_MapBucket *curr = map.base[idx];
 	while (curr) {
-		if (map.key_eq(key, size, curr->key, curr->key_size))
+		if (!map.key_obj.compare(key, curr->key)) {
 			return curr->data;
+		}
 		curr = curr->next;
 	}
 	return NULL;
 }
 
-void mapRemove(Allocator allocator, Map *map, void *key, usize size) {
+void mapRemove(Allocator allocator, Map *map, const void *key) {
 	map->collisions--;
-	usize idx = map->hash_fn(key, size);
+	usize idx = map->hash_fn(key, map->key_obj.size());
 	_MapBucket *curr = map->base[idx];
 	_MapBucket *prev = curr;
 	while (curr) {
-		if (map->key_eq(key, size, curr->key, curr->key_size)) {
+		if (!map->key_obj.compare(key, curr->key)) {
 			if (curr == map->base[idx])
 				map->base[idx] = curr->next;
 			else
@@ -78,10 +80,14 @@ void mapDelete(Allocator allocator, Map map) {
 			_MapBucket *prev = curr;
 			curr = curr->next;
 			while (curr) {
+				map.key_obj.free(allocator, prev->key);
+				map.data_obj.free(allocator, prev->data);
 				delete(allocator, prev);
 				prev = curr;
 				curr = curr->next;
 			}
+			map.key_obj.free(allocator, prev->key);
+			map.data_obj.free(allocator, prev->data);
 			delete(allocator, prev);
 		}
 	}
@@ -91,22 +97,10 @@ void mapDelete(Allocator allocator, Map map) {
 #define MAGIC_PRIME	 5381
 #define MAGIC_NUMBER 5
 
-usize mapDefaultHash(void *key, usize size) {
-	byte *p = key;
+usize mapDefaultHash(const void *key, usize size) {
+	const byte *p = key;
 	usize hash = MAGIC_PRIME;
 	for (usize i = 0; i < size; i++)
 		hash = ((hash << MAGIC_NUMBER) + hash) + p[i];
 	return hash;
-}
-
-bool mapKeyCmpString(void *key1, usize, void *key2, usize) {
-	String str1 = *(String *)key1;
-	String str2 = *(String *)key2;
-	return stringCmp(str1, str2) == 0;
-}
-
-bool mapKeyEqInt64(void *key1, usize, void *key2, usize) {
-	i64 k1 = *(i64 *)key1;
-	i64 k2 = *(i64 *)key2;
-	return k1 == k2;
 }

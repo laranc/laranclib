@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -45,16 +46,14 @@ void *arenaAllocAligned(Arena *arena, usize size, usize align) {
 	return ptr;
 }
 
-void *arenaAlloc(void *ctx, usize size) {
-	Arena *arena = ctx;
+void *arenaAlloc(Arena *arena, usize size) {
 	if (size == 0) {
 		return NULL;
 	}
 	return arenaAllocAligned(arena, size, ALLOCATOR_DEFAULT_MEMORY_ALIGNMENT);
 }
 
-void arenaFreeAll(void *ctx) {
-	Arena *arena = ctx;
+void arenaFreeAll(Arena *arena) {
 	pthread_mutex_lock(&arena->mu);
 	memset(arena->base, 0, arena->len);
 	arena->offset = 0;
@@ -65,4 +64,23 @@ void arenaFreeAll(void *ctx) {
 void arenaDelete(Arena *arena) {
 	free(arena->base);
 	free(arena);
+}
+
+void *_arenaAlloc(usize len, void *ctx) {
+	Arena *arena = ctx;
+	return arenaAlloc(arena, len);
+}
+
+void *_arenaRealloc(usize, void *, void *) {
+	assert(0 && "Arena does not support Allocator.realloc");
+	return NULL;
+}
+
+void _arenaFree(void *, void *) {
+	assert(0 && "Arena does not support Allocator.free");
+}
+
+void _arenaFreeAll(void *ctx) {
+	Arena *arena = ctx;
+	arenaFreeAll(arena);
 }

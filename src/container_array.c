@@ -1,8 +1,10 @@
+#include <stdlib.h>
 #include <string.h>
 
 #include "container/array.h"
 
 Array arrayNew(Allocator allocator, usize len, usize size) {
+	len = len > 0 ? len : ARRAY_INIT_SIZE;
 	usize bytes = len * size;
 	void *data = make(allocator, bytes);
 	memset(data, 0, bytes);
@@ -124,3 +126,56 @@ void arrayDelete(Allocator allocator, Array array) {
 	if (allocator.free)
 		delete(allocator, array.base);
 }
+
+i32 arrayCmpBytes(Array a, Array b) {
+	if (a.base == b.base && a.len == b.len)
+		return 0;
+	else if (a.len > b.len)
+		return 1;
+	else if (a.len < b.len)
+		return -1;
+	const byte *data_a = a.base;
+	const byte *data_b = b.base;
+	for (usize i = 0; i < a.len; i++) {
+		if (data_a[i] > data_b[i])
+			return 1;
+		else if (data_a[i] < data_b[i])
+			return -1;
+	}
+	return 0;
+}
+
+static i32 cmpByte(const void *a, const void *b) {
+	byte byte_a = *(byte *)a;
+	byte byte_b = *(byte *)b;
+	if (byte_a > byte_b)
+		return 1;
+	else if (byte_a < byte_b)
+		return -1;
+	else
+		return 0;
+}
+
+void arrayQsort(Array array, ArrayCmpElem cmp) {
+	cmp = cmp != NULL ? cmp : cmpByte;
+	qsort(array.base, array.len, array.size, cmp);
+}
+
+void *_arrayObjClone(Allocator allocator, const void *ptr) {
+	Array *array = new(allocator, Array, 1);
+	*array = arrayCopy(allocator, *(Array *)ptr);
+	return array;
+}
+
+void _arrayObjFree(Allocator allocator, void *ptr) {
+	arrayDelete(allocator, *(Array *)ptr);
+	delete(allocator, ptr);
+}
+
+i32 _arrayObjCompare(const void *a, const void *b) {
+	const Array *arr_a = a;
+	const Array *arr_b = b;
+	return arrayCmpBytes(*arr_a, *arr_b);
+}
+
+usize _arrayObjSize(void) { return sizeof(Array); }

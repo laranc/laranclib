@@ -3,7 +3,6 @@
 #include <pthread.h>
 
 #include "mem/allocator.h"
-#include "types.h"
 
 typedef struct arena_t {
 	byte *base;
@@ -20,21 +19,25 @@ Arena *arenaNew(usize len);
 void *arenaAllocAligned(Arena *arena, usize len, usize align);
 
 // Allocate data
-void *arenaAlloc(void *ctx, usize size);
+void *arenaAlloc(Arena *arena, usize size);
 
 // Writes over the base memory with zero
-void arenaFreeAll(void *ctx);
+void arenaFreeAll(Arena *arena);
 
 // Frees the backing memory and the Arena itself
 void arenaDelete(Arena *arena);
 
 // Implement Allocator interface
+void *_arenaAlloc(usize len, void *ctx);
+void *_arenaRealloc(usize new_size, void *ptr, void *ctx);
+void _arenaFree(void *ptr, void *ctx);
+void _arenaFreeAll(void *ctx);
 static inline Allocator arenaAllocatorImpl(Arena *arena) {
 	return (Allocator){
-		.alloc = arenaAlloc,
-		.realloc = NULL,
-		.free = NULL,
-		.free_all = arenaFreeAll,
+		.alloc = _arenaAlloc,
+		.realloc = _arenaRealloc,
+		.free = _arenaFree,
+		.free_all = _arenaFreeAll,
 		.ctx = arena,
 	};
 }

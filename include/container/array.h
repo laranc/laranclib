@@ -1,7 +1,13 @@
 #pragma once
 
+#include "core/object.h"
 #include "mem/allocator.h"
-#include "types.h"
+
+#ifndef ARRAY_INIT_SIZE
+#define ARRAY_INIT_SIZE 10
+#endif
+
+typedef i32 (*ArrayCmpElem)(const void *a, const void *b);
 
 typedef struct array_t {
 	void *base;
@@ -47,3 +53,23 @@ void arrayRemove(Allocator allocator, Array *array, usize idx);
 
 // Frees the backing buffer
 void arrayDelete(Allocator allocator, Array array);
+
+// Compares two arrays by their bytes
+i32 arrayCmpBytes(Array a, Array b);
+
+// Sort the array using the comparison function
+void arrayQsort(Array array, ArrayCmpElem cmp);
+
+// Implement Object interface
+void *_arrayObjClone(Allocator allocator, const void *ptr);
+void _arrayObjFree(Allocator allocator, void *ptr);
+i32 _arrayObjCompare(const void *a, const void *b);
+usize _arrayObjSize(void);
+static inline Object arrayObject(void) {
+	return (Object){
+		.clone = _arrayObjClone,
+		.free = _arrayObjFree,
+		.compare = _arrayObjCompare,
+		.size = _arrayObjSize,
+	};
+}

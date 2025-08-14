@@ -23,10 +23,13 @@ File fileOpen(const char *file_path, const char *modes);
 void fileClose(File file);
 
 // Reads from the File, returning a byte Array
-Array fileRead(void *ctx, Allocator allocator);
+Array fileRead(Allocator allocator, File file);
+
+// Reads from the file until it encounters a new line or EOF
+String fileReadLine(Allocator allocator, File file);
 
 // Appends the byte Array to the File
-usize fileWrite(void *ctx, Array array);
+usize fileWrite(File file, Array array);
 
 // Reads from the file, returns a pointer, sets number of bytes read
 void *filePathReadRaw(Allocator allocator, const char *file_path, usize *bytes);
@@ -47,11 +50,13 @@ usize filePathWriteBytes(const char *file_path, Array array);
 usize filePathWriteString(const char *file_path, String string);
 
 // Implement IOReader interface
+Array fileIORead(Allocator allocator, void *ctx);
 static inline IOReader fileIOReaderImpl(File *file) {
-	return (IOReader){.read = fileRead, .ctx = file};
+	return (IOReader){.read = fileIORead, .ctx = file};
 }
 
 // Implement IOWriter interface
+usize fileIOWrite(Array array, void *ctx);
 static inline IOWriter fileIOWriterImpl(File *file) {
-	return (IOWriter){.write = fileWrite, .ctx = file};
+	return (IOWriter){.write = fileIOWrite, .ctx = file};
 }

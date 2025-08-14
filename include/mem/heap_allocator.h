@@ -3,7 +3,6 @@
 #include <stdatomic.h>
 
 #include "mem/allocator.h"
-#include "types.h"
 
 typedef struct heap_allocator_t {
 	atomic_int alloc_count;
@@ -13,19 +12,25 @@ typedef struct heap_allocator_t {
 HeapAllocator *heapAllocatorNew(void);
 
 // Call malloc and increment alloc_count
-void *heapAlloc(void *ctx, usize size);
+void *heapAlloc(HeapAllocator *heap_allocator, usize size);
 
 // Call realloc
-void *heapRealloc(void *, usize new_size, void *ptr);
+void *heapRealloc(HeapAllocator *heap_allocator, usize new_size, void *ptr);
 
 // Call free and decrement alloc_count
-void heapFree(void *ctx, void *ptr);
+void heapFree(HeapAllocator *heap_allocator, void *ptr);
 
 // Implement Allocator interface
+void *_heapAlloc(usize size, void *ctx);
+void *_heapRealloc(usize new_size, void *ptr, void *ctx);
+void _heapFree(void *ptr, void *ctx);
+void _heapFreeAll(void *ctx);
 static inline Allocator heapAllocatorImpl(HeapAllocator *heap_allocator) {
-	return (Allocator){.alloc = heapAlloc,
-					   .realloc = heapRealloc,
-					   .free = heapFree,
-					   .free_all = NULL,
-					   .ctx = heap_allocator};
+	return (Allocator){
+		.alloc = _heapAlloc,
+		.realloc = _heapRealloc,
+		.free = _heapFree,
+		.free_all = _heapFreeAll,
+		.ctx = heap_allocator,
+	};
 }

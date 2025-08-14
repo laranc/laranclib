@@ -1,7 +1,11 @@
 #pragma once
 
+#include "core/object.h"
 #include "mem/allocator.h"
-#include "types.h"
+
+#ifndef MAX_STRING_SIZE
+#define MAX_STRING_SIZE 10000
+#endif
 
 typedef struct string_t {
 	char *base;
@@ -36,7 +40,7 @@ String stringSlice(String string, usize start, usize end);
 String stringConcat(Allocator allocator, String left, String right);
 
 // Free a the backing data of a String
-void stringFree(Allocator allocator, String string);
+void stringDelete(Allocator allocator, String string);
 
 // Modifies the underlying data to set all chars to lower case
 void stringToLower(String string);
@@ -46,3 +50,17 @@ void stringToUpper(String string);
 
 // Returns the lexical difference between a and b
 i32 stringCmp(String a, String b);
+
+// Implement Object interface
+void *_stringObjClone(Allocator allocator, const void *ptr);
+void _stringObjFree(Allocator allocator, void *ptr);
+i32 _stringObjCompare(const void *a, const void *b);
+usize _stringObjSize(void);
+static inline Object stringObject(void) {
+	return (Object){
+		.clone = _stringObjClone,
+		.free = _stringObjFree,
+		.compare = _stringObjCompare,
+		.size = _stringObjSize,
+	};
+}

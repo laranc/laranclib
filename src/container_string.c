@@ -89,7 +89,7 @@ String stringConcat(Allocator allocator, String left, String right) {
 	};
 }
 
-void stringFree(Allocator allocator, String string) {
+void stringDelete(Allocator allocator, String string) {
 	if (allocator.free)
 		delete(allocator, string.base);
 }
@@ -120,3 +120,20 @@ i32 stringCmp(String a, String b) {
 	}
 	return 0;
 }
+
+void *_stringObjClone(Allocator allocator, const void *ptr) {
+	String *string = new(allocator, String, 1);
+	*string = stringCopy(allocator, *(String *)ptr);
+	return string;
+}
+
+void _stringObjFree(Allocator allocator, void *ptr) {
+	stringDelete(allocator, *(String *)ptr);
+	delete(allocator, ptr);
+}
+
+i32 _stringObjCompare(const void *a, const void *b) {
+	return stringCmp(*(String *)a, *(String *)b);
+}
+
+usize _stringObjSize(void) { return sizeof(String); }
