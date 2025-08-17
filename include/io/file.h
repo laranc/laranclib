@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "container/array.h"
 #include "container/string.h"
 #include "io/interface.h"
 
@@ -41,7 +40,7 @@ Array filePathReadBytes(Allocator allocator, const char *file_path);
 String filePathReadString(Allocator allocator, const char *file_path);
 
 // Truncates the file with ptr bytes
-usize filePathWriteRaw(const char *file_path, void *ptr, usize len);
+usize filePathWriteRaw(const char *file_path, const void *ptr, usize len);
 
 // Truncates the file with Array bytes
 usize filePathWriteBytes(const char *file_path, Array array);
@@ -50,13 +49,23 @@ usize filePathWriteBytes(const char *file_path, Array array);
 usize filePathWriteString(const char *file_path, String string);
 
 // Implement IOReader interface
-Array fileIORead(Allocator allocator, void *ctx);
+String _fileIORead(Allocator alloctator, void *ctx);
+Array _fileIOReadBytes(Allocator allocator, void *ctx);
 static inline IOReader fileIOReaderImpl(File *file) {
-	return (IOReader){.read = fileIORead, .ctx = file};
+	return (IOReader){
+		.read = _fileIORead,
+		.read_bytes = _fileIOReadBytes,
+		.ctx = file,
+	};
 }
 
 // Implement IOWriter interface
-usize fileIOWrite(Array array, void *ctx);
+usize _fileIOWrite(String string, void *ctx);
+usize _fileIOWriteBytes(Array bytes, void *ctx);
 static inline IOWriter fileIOWriterImpl(File *file) {
-	return (IOWriter){.write = fileIOWrite, .ctx = file};
+	return (IOWriter){
+		.write = _fileIOWrite,
+		.write_bytes = _fileIOWriteBytes,
+		.ctx = file,
+	};
 }

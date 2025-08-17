@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/object.h"
-#include "mem/allocator.h"
 
 #ifndef MAP_INIT_SIZE
 #define MAP_INIT_SIZE 10

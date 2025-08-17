@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "mem/allocator.h"
 #include "mem/arena.h"
 
 Arena *arenaNew(usize len) {

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/object.h"
-#include "mem/allocator.h"
 
 #ifndef ARRAY_INIT_SIZE
 #define ARRAY_INIT_SIZE 10
@@ -15,6 +14,9 @@ typedef struct array_t {
 	usize size;
 	usize used;
 } Array;
+
+// Shorthand constructor
+#define ARRAY(a, t) (arrayNew(a, 0, sizeof(t)))
 
 // Allocates a new array of size: len (n elements) * size (bytes per element)
 Array arrayNew(Allocator allocator, usize len, usize size);
@@ -43,7 +45,7 @@ void arrayInsert(Array array, usize idx, void *data);
 
 // Appends a new element the array, if the array has no room a new buffer will
 // be allocated
-Array arrayAppend(Allocator allocator, Array array, void *data);
+void arrayAppend(Allocator allocator, Array *array, void *data);
 
 // Allocates a new array from the elements of the left and right arrays
 Array arrayConcat(Allocator allocator, Array left, Array right);

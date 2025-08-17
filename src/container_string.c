@@ -5,13 +5,6 @@
 
 #include "container/string.h"
 
-String stringNew(Allocator allocator, usize len) {
-	return (String){
-		.base = make(allocator, len),
-		.len = len,
-	};
-}
-
 String stringFromCStr(char *str) {
 	if (!str)
 		return (String){0};
@@ -106,6 +99,22 @@ void stringToUpper(String string) {
 	}
 }
 
+Array stringSplit(Allocator allocator, String string, String delims) {
+	Array array = ARRAY(allocator, String);
+	usize start = 0;
+	for (usize i = 0; i < string.len; i++) {
+		for (usize j = 0; j < delims.len; j++) {
+			if (string.base[i] == delims.base[j]) {
+				String slice = stringSlice(string, start, i);
+				arrayAppend(allocator, &array, &slice);
+				start = i;
+				continue;
+			}
+		}
+	}
+	return array;
+}
+
 i32 stringCmp(String a, String b) {
 	if (a.len < b.len) {
 		return -1;
@@ -119,6 +128,40 @@ i32 stringCmp(String a, String b) {
 			return diff;
 	}
 	return 0;
+}
+
+StringBuilder stringBuilderNew(Allocator allocator, usize len) {
+	return (StringBuilder){.buffer = arrayNew(allocator, len, sizeof(byte))};
+}
+
+void stringBuilderAppendString(Allocator allocator, StringBuilder *builder,
+							   String string) {
+	Array array =
+		arrayFromPtr(string.len, sizeof(byte), string.len, string.base);
+	Array new_buf = arrayConcat(allocator, builder->buffer, array);
+	arrayDelete(allocator, builder->buffer);
+	builder->buffer = new_buf;
+}
+
+void stringBuilderAppendBytes(Allocator allocator, StringBuilder *builder,
+							  Array bytes) {
+	Array new_buf = arrayConcat(allocator, builder->buffer, bytes);
+	arrayDelete(allocator, builder->buffer);
+	builder->buffer = new_buf;
+}
+
+void stringBuilderAppendChar(Allocator allocator, StringBuilder *builder,
+							 char c) {
+	arrayAppend(allocator, &builder->buffer, &c);
+}
+
+String stringBuilderToString(Allocator allocator, StringBuilder builder) {
+	return stringCopy(allocator,
+					  stringFromPtr(builder.buffer.base, builder.buffer.used));
+}
+
+void stringBuilderDelete(Allocator allocator, StringBuilder builder) {
+	arrayDelete(allocator, builder.buffer);
 }
 
 void *_stringObjClone(Allocator allocator, const void *ptr) {

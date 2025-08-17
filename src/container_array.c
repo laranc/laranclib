@@ -84,17 +84,14 @@ void arrayInsert(Array array, usize idx, void *data) {
 	memcpy(array.base + (idx * array.size), data, array.size);
 }
 
-Array arrayAppend(Allocator allocator, Array array, void *data) {
-	usize bytes = array.len * array.size;
-	if (array.used < array.len) {
-		void *new_base = make(allocator, bytes * 2);
-		memcpy(new_base, array.base, array.len * array.size);
-		array.base = new_base;
-		array.len *= 2;
+void arrayAppend(Allocator allocator, Array *array, void *data) {
+	usize bytes = array->len * array->size;
+	if (array->used < array->len) {
+		array->base = resize(allocator, bytes * 2, array->base);
+		array->len *= 2;
 	}
-	memcpy(array.base + (array.used * array.size), data, array.size);
-	array.used++;
-	return array;
+	memcpy(array->base + (array->used * array->size), data, array->size);
+	array->used++;
 }
 
 Array arrayConcat(Allocator allocator, Array left, Array right) {

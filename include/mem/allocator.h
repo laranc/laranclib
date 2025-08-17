@@ -14,6 +14,7 @@ typedef struct allocator_t {
 	void *ctx;
 } Allocator;
 
+// C++ style keywords
 // a: Allocator, t: type, n: n elements of t
 #define new(a, t, n)	((t *)a.alloc(sizeof(t) * n, a.ctx))
 // a: Allocator, s: size in bytes
@@ -22,4 +23,3 @@ typedef struct allocator_t {
 #define resize(a, s, p) (a.realloc(s, p, a.ctx))
 // a: Allocator, p: pointer
 #define delete(a, p)	(a.free(p, a.ctx))
-#define clear(a)		(a.free_all(a.ctx))

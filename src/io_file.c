@@ -1,6 +1,3 @@
-#include <stdio.h>
-
-#include "container/array.h"
 #include "container/string.h"
 #include "io/file.h"
 #include "mem/allocator.h"
@@ -39,13 +36,13 @@ static byte *read(Allocator allocator, FILE *fd, usize *bytes) {
 }
 
 static char *readLine(Allocator allocator, FILE *fd) {
-	usize len = MAX_STRING_SIZE;
+	usize len = STRING_MAX_SIZE;
 	char *buf = make(allocator, len);
 	char c = getc(fd);
 	usize n = 0;
 	while (c != '\n' && c != EOF) {
-		if (n == MAX_STRING_SIZE) {
-			len += MAX_STRING_SIZE;
+		if (n == STRING_MAX_SIZE) {
+			len += STRING_MAX_SIZE;
 			buf = resize(allocator, len, buf);
 		}
 		buf[n] = c;
@@ -118,7 +115,7 @@ String filePathReadString(Allocator allocator, const char *file_path) {
 	return stringFromPtr(data, len);
 }
 
-usize filePathWriteRaw(const char *file_path, void *ptr, usize len) {
+usize filePathWriteRaw(const char *file_path, const void *ptr, usize len) {
 	FILE *fd = fopen(file_path, "wb");
 	if (ferror(fd))
 		return 0;
@@ -135,12 +132,24 @@ usize filePathWriteString(const char *file_path, String string) {
 	return filePathWriteRaw(file_path, string.base, string.len);
 }
 
-Array fileIORead(Allocator allocator, void *ctx) {
+String _fileIORead(Allocator allocator, void *ctx) {
+	File *file = ctx;
+	Array bytes = fileRead(allocator, *file);
+	return stringFromPtr(bytes.base, bytes.used);
+}
+
+Array _fileIOReadBytes(Allocator allocator, void *ctx) {
 	File *file = ctx;
 	return fileRead(allocator, *file);
 }
 
-usize fileIOWrite(Array array, void *ctx) {
+usize _fileIOWrite(String string, void *ctx) {
+	File *file = ctx;
+	return fileWrite(
+		*file, arrayFromPtr(string.len, sizeof(char), string.len, string.base));
+}
+
+usize _fileIOWriteBytes(Array array, void *ctx) {
 	File *file = ctx;
 	return fileWrite(*file, array);
 }
