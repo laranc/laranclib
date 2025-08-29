@@ -3,25 +3,24 @@
 
 #include "container/array.h"
 
-Array arrayNew(Allocator allocator, usize len, usize size) {
-	len = len > 0 ? len : ARRAY_INIT_SIZE;
-	usize bytes = len * size;
+Array arrayNew(Allocator allocator, usize cap, usize size) {
+	cap = cap > 0 ? cap : ARRAY_INIT_SIZE;
+	usize bytes = cap * size;
 	void *data = make(allocator, bytes);
-	memset(data, 0, bytes);
 	return (Array){
 		.base = data,
-		.len = len,
+		.len = 0,
+		.cap = cap,
 		.size = size,
-		.used = 0,
 	};
 }
 
-Array arrayFromPtr(usize len, usize size, usize used, void *ptr) {
+Array arrayFromPtr(usize len, usize size, void *ptr) {
 	return (Array){
 		.base = ptr,
 		.len = len,
+		.cap = len,
 		.size = size,
-		.used = used,
 	};
 }
 
@@ -32,12 +31,12 @@ Array arrayCopy(Allocator allocator, Array source) {
 	return (Array){
 		.base = data,
 		.len = source.len,
+		.cap = source.cap,
 		.size = source.size,
-		.used = source.used,
 	};
 }
 
-Array arrayCopyPtr(Allocator allocator, usize len, usize size, usize used,
+Array arrayCopyPtr(Allocator allocator, usize len, usize size,
 				   const void *ptr) {
 	usize bytes = len * size;
 	void *data = make(allocator, bytes);
@@ -45,8 +44,8 @@ Array arrayCopyPtr(Allocator allocator, usize len, usize size, usize used,
 	return (Array){
 		.base = data,
 		.len = len,
+		.cap = len,
 		.size = size,
-		.used = used,
 	};
 }
 
@@ -55,59 +54,60 @@ Array arraySlice(Array source, usize start, usize end) {
 		return source;
 	return (Array){
 		.base = source.base + start,
-		.len = end - start,
+		.len = source.len > start ? source.len - start : 0,
+		.cap = end - start,
 		.size = source.size,
-		.used = source.used > start ? source.used - start : 0,
 	};
 }
 
-Array arraySlicePtr(usize start, usize end, usize used, usize size, void *ptr) {
+Array arraySlicePtr(usize start, usize end, usize len, usize size, void *ptr) {
 	if (start > end)
-		return arrayFromPtr(end - start, size, used, ptr);
+		return arrayFromPtr(end - start, size, ptr);
 	return (Array){
 		.base = ptr + start,
-		.len = end - start,
+		.len = len > start ? len - start : 0,
+		.cap = end - start,
 		.size = size,
-		.used = used > start ? used - start : 0,
 	};
 }
 
 void *arrayGet(Array array, usize idx) {
 	if (idx >= array.len)
-		return NULL;
+		return nullptr;
 	return array.base + (idx * array.size);
 }
 
-void arrayInsert(Array array, usize idx, void *data) {
-	if (idx >= array.len)
+void arrayInsert(Array *array, usize idx, const void *data) {
+	if (idx >= array->cap)
 		return;
-	memcpy(array.base + (idx * array.size), data, array.size);
+	array->len = array->len > idx ? array->len : idx;
+	memcpy(array->base + (idx * array->size), data, array->size);
 }
 
-void arrayAppend(Allocator allocator, Array *array, void *data) {
-	usize bytes = array->len * array->size;
-	if (array->used < array->len) {
+void arrayAppend(Allocator allocator, Array *array, const void *data) {
+	usize bytes = array->cap * array->size;
+	if (array->len < array->cap) {
 		array->base = resize(allocator, bytes * 2, array->base);
-		array->len *= 2;
+		array->cap *= 2;
 	}
-	memcpy(array->base + (array->used * array->size), data, array->size);
-	array->used++;
+	memcpy(array->base + (array->len * array->size), data, array->size);
+	array->len++;
 }
 
 Array arrayConcat(Allocator allocator, Array left, Array right) {
 	if (left.size != right.size)
 		return (Array){0};
-	usize len = left.used + right.used;
+	usize len = left.len + right.len;
 	usize size = left.size;
 	usize bytes = len * size;
 	void *data = make(allocator, bytes);
-	memcpy(data, left.base, left.used * size);
-	memcpy(data + left.used * size, right.base, right.used * size);
+	memcpy(data, left.base, left.len * size);
+	memcpy(data + left.len * size, right.base, right.len * size);
 	return (Array){
 		.base = data,
 		.len = len,
+		.cap = len,
 		.size = size,
-		.used = len,
 	};
 }
 
@@ -154,7 +154,7 @@ static i32 cmpByte(const void *a, const void *b) {
 }
 
 void arrayQsort(Array array, ArrayCmpElem cmp) {
-	cmp = cmp != NULL ? cmp : cmpByte;
+	cmp = cmp ? cmp : cmpByte;
 	qsort(array.base, array.len, array.size, cmp);
 }
 
@@ -176,3 +176,37 @@ i32 _arrayObjCompare(const void *a, const void *b) {
 }
 
 usize _arrayObjSize(void) { return sizeof(Array); }
+
+void *_arrayIterStart(void *ctx, i64 *cnt) {
+	Array *array = ctx;
+	*cnt = 0;
+	return arrayGet(*array, *cnt);
+}
+
+void *_arrayIterNext(void *ctx, i64 *cnt) {
+	Array *array = ctx;
+	return arrayGet(*array, ++(*cnt));
+}
+
+void *_arrayIterCurr(void *ctx, i64 *cnt) {
+	Array *array = ctx;
+	return arrayGet(*array, *cnt);
+}
+
+void *_arrayIterPrev(void *ctx, i64 *cnt) {
+	Array *array = ctx;
+	return arrayGet(*array, --(*cnt));
+}
+
+void *_arrayIterEnd(void *ctx, i64 *cnt) {
+	Array *array = ctx;
+	*cnt = (i64)array->len - 1;
+	return arrayGet(*array, *cnt);
+}
+
+bool _arrayIterAtStart(void *, i64 *cnt) { return *cnt < 0; }
+
+bool _arrayIterAtEnd(void *ctx, i64 *cnt) {
+	Array *array = ctx;
+	return *cnt == (i64)array->len;
+}

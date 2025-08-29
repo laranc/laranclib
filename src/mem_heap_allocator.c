@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdatomic.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "mem/heap_allocator.h"
 
@@ -12,7 +13,9 @@ HeapAllocator *heapAllocatorNew(void) {
 
 void *heapAlloc(HeapAllocator *heap_allocator, usize size) {
 	atomic_fetch_add(&heap_allocator->alloc_count, 1);
-	return malloc(size);
+	void *ptr = malloc(size);
+	memset(ptr, 0, size);
+	return ptr;
 }
 
 void *heapRealloc(HeapAllocator *heap_allocator, usize new_size, void *ptr) {

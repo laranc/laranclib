@@ -3,7 +3,7 @@
 #include "container/array.h"
 
 #ifndef STRING_MAX_SIZE
-#define STRING_MAX_SIZE 10000
+#define STRING_MAX_SIZE 2048
 #endif
 
 typedef struct string_t {
@@ -60,6 +60,10 @@ i32 stringCmp(String a, String b);
 // Allocates a new StringBuilder
 StringBuilder stringBuilderNew(Allocator allocator, usize len);
 
+// Add a byte to the internal buffer
+void stringBuilderAppendChar(Allocator allocator, StringBuilder *builder,
+							 char c);
+
 // Add a String to the internal buffer
 void stringBuilderAppendString(Allocator allocator, StringBuilder *builder,
 							   String string);
@@ -68,12 +72,8 @@ void stringBuilderAppendString(Allocator allocator, StringBuilder *builder,
 void stringBuilderAppendBytes(Allocator allocator, StringBuilder *builder,
 							  Array bytes);
 
-// Add a byte to the internal buffer
-void stringBuilderAppendChar(Allocator allocator, StringBuilder *builder,
-							 char c);
-
-// Allocates a new String from the internal buffer
-String stringBuilderToString(Allocator allocator, StringBuilder builder);
+// Returns the internal buffer as a String
+String stringBuilderToString(StringBuilder builder);
 
 // Frees the internal buffer
 void stringBuilderDelete(Allocator allocator, StringBuilder builder);
@@ -89,5 +89,27 @@ static inline Object stringObject(void) {
 		.free = _stringObjFree,
 		.compare = _stringObjCompare,
 		.size = _stringObjSize,
+	};
+}
+
+// Implement Iterator interface
+void *_stringIterStart(void *ctx, i64 *cnt);
+void *_stringIterNext(void *ctx, i64 *cnt);
+void *_stringIterCurr(void *ctx, i64 *cnt);
+void *_stringIterPrev(void *ctx, i64 *cnt);
+void *_stringIterEnd(void *ctx, i64 *cnt);
+bool _stringIterAtStart(void *ctx, i64 *cnt);
+bool _stringIterAtEnd(void *ctx, i64 *cnt);
+static inline Iterator stringIter(String *string) {
+	return (Iterator){
+		.start = _stringIterStart,
+		.next = _stringIterNext,
+		.curr = _stringIterCurr,
+		.prev = _stringIterPrev,
+		.end = _stringIterEnd,
+		.at_start = _stringIterAtStart,
+		.at_end = _stringIterAtEnd,
+		.ctx = string,
+		.cnt = 0,
 	};
 }

@@ -3,7 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "container/array.h"
 #include "container/string.h"
+#include "core/iterator.h"
 
 String stringFromCStr(char *str) {
 	if (!str)
@@ -99,27 +101,40 @@ void stringToUpper(String string) {
 	}
 }
 
-Array stringSplit(Allocator allocator, String string, String delims) {
-	Array array = ARRAY(allocator, String);
-	usize start = 0;
-	for (usize i = 0; i < string.len; i++) {
-		for (usize j = 0; j < delims.len; j++) {
-			if (string.base[i] == delims.base[j]) {
-				String slice = stringSlice(string, start, i);
-				arrayAppend(allocator, &array, &slice);
-				start = i;
-				continue;
-			}
-		}
+static bool isDelim(char c, String delims) {
+	for (usize i = 0; i < delims.len; i++) {
+		if (c == delims.base[i])
+			return true;
 	}
+	return false;
+}
+
+Array stringSplit(Allocator allocator, String string, String delims) {
+	usize count = 0;
+	for (usize i = 0; i < string.len; i++) {
+		if (isDelim(string.base[i], delims))
+			count++;
+	}
+	Array array = arrayNew(allocator, count + 1, sizeof(String));
+	usize start = 0;
+	usize idx = 0;
+	for (usize i = 0; i < string.len; i++) {
+		if (!isDelim(string.base[i], delims))
+			continue;
+		String substr = stringSlice(string, start, i);
+		arrayInsert(&array, idx, &substr);
+		start = i + 1;
+		idx++;
+	}
+	String substr = stringSlice(string, start, string.len);
+	arrayInsert(&array, idx, &substr);
 	return array;
 }
 
 i32 stringCmp(String a, String b) {
 	if (a.len < b.len) {
 		return -1;
-	}
-	if (b.len < a.len) {
+	} else if (b.len < a.len) {
 		return 1;
 	}
 	for (usize i = 0; i < a.len; i++) {
@@ -134,30 +149,27 @@ StringBuilder stringBuilderNew(Allocator allocator, usize len) {
 	return (StringBuilder){.buffer = arrayNew(allocator, len, sizeof(byte))};
 }
 
-void stringBuilderAppendString(Allocator allocator, StringBuilder *builder,
-							   String string) {
-	Array array =
-		arrayFromPtr(string.len, sizeof(byte), string.len, string.base);
-	Array new_buf = arrayConcat(allocator, builder->buffer, array);
-	arrayDelete(allocator, builder->buffer);
-	builder->buffer = new_buf;
-}
-
-void stringBuilderAppendBytes(Allocator allocator, StringBuilder *builder,
-							  Array bytes) {
-	Array new_buf = arrayConcat(allocator, builder->buffer, bytes);
-	arrayDelete(allocator, builder->buffer);
-	builder->buffer = new_buf;
-}
-
 void stringBuilderAppendChar(Allocator allocator, StringBuilder *builder,
 							 char c) {
 	arrayAppend(allocator, &builder->buffer, &c);
 }
 
-String stringBuilderToString(Allocator allocator, StringBuilder builder) {
-	return stringCopy(allocator,
-					  stringFromPtr(builder.buffer.base, builder.buffer.used));
+void stringBuilderAppendString(Allocator allocator, StringBuilder *builder,
+							   String string) {
+	Iterator iter = stringIter(&string);
+	for (char *c = ITER_START(iter); !ITER_AT_END(iter); c = ITER_NEXT(iter))
+		arrayAppend(allocator, &builder->buffer, c);
+}
+
+void stringBuilderAppendBytes(Allocator allocator, StringBuilder *builder,
+							  Array bytes) {
+	Iterator iter = arrayIter(&bytes);
+	for (byte *b = ITER_START(iter); !ITER_AT_END(iter); b = ITER_NEXT(iter))
+		arrayAppend(allocator, &builder->buffer, b);
+}
+
+String stringBuilderToString(StringBuilder builder) {
+	return stringFromPtr(builder.buffer.base, builder.buffer.len);
 }
 
 void stringBuilderDelete(Allocator allocator, StringBuilder builder) {
@@ -180,3 +192,37 @@ i32 _stringObjCompare(const void *a, const void *b) {
 }
 
 usize _stringObjSize(void) { return sizeof(String); }
+
+void *_stringIterStart(void *ctx, i64 *cnt) {
+	String *string = ctx;
+	*cnt = 0;
+	return string->base;
+}
+
+void *_stringIterNext(void *ctx, i64 *cnt) {
+	String *string = ctx;
+	return &string->base[++(*cnt)];
+}
+
+void *_stringIterCurr(void *ctx, i64 *cnt) {
+	String *string = ctx;
+	return &string->base[*cnt];
+}
+
+void *_stringIterPrev(void *ctx, i64 *cnt) {
+	String *string = ctx;
+	return &string->base[--(*cnt)];
+}
+
+void *_stringIterEnd(void *ctx, i64 *cnt) {
+	String *string = ctx;
+	*cnt = (i64)string->len - 1;
+	return &string->base[*cnt];
+}
+
+bool _stringIterAtStart(void *, i64 *cnt) { return *cnt < 0; }
+
+bool _stringIterAtEnd(void *ctx, i64 *cnt) {
+	String *string = ctx;
+	return *cnt == (i64)string->len;
+}

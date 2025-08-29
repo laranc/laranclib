@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -12,7 +13,7 @@ Arena *arenaNew(usize len) {
 		.offset = 0,
 		.used = 0,
 	};
-	pthread_mutex_init(&arena->mu, NULL);
+	pthread_mutex_init(&arena->mu, nullptr);
 	return arena;
 }
 
@@ -36,7 +37,7 @@ void *arenaAllocAligned(Arena *arena, usize size, usize align) {
 	uptr offset = alignForward(curr, align);
 	offset -= (uptr)arena->base;
 	if (offset + size > arena->len) {
-		return NULL;
+		return nullptr;
 	}
 	arena->used += size;
 	void *ptr = arena->base + offset;
@@ -47,7 +48,7 @@ void *arenaAllocAligned(Arena *arena, usize size, usize align) {
 
 void *arenaAlloc(Arena *arena, usize size) {
 	if (size == 0) {
-		return NULL;
+		return nullptr;
 	}
 	return arenaAllocAligned(arena, size, ALLOCATOR_DEFAULT_MEMORY_ALIGNMENT);
 }
@@ -72,7 +73,7 @@ void *_arenaAlloc(usize len, void *ctx) {
 
 void *_arenaRealloc(usize, void *, void *) {
 	assert(0 && "Arena does not support Allocator.realloc");
-	return NULL;
+	return nullptr;
 }
 
 void _arenaFree(void *, void *) {

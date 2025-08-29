@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/iterator.h"
 #include "core/object.h"
 
 #ifndef ARRAY_INIT_SIZE
@@ -11,41 +12,43 @@ typedef i32 (*ArrayCmpElem)(const void *a, const void *b);
 typedef struct array_t {
 	void *base;
 	usize len;
+	usize cap;
 	usize size;
-	usize used;
 } Array;
 
-// Shorthand constructor
-#define ARRAY(a, t) (arrayNew(a, 0, sizeof(t)))
+// Shortcut macros
+// a: Allocator, t: type
+#define ARRAY(a, t)		   (arrayNew(a, 0, sizeof(t)))
+// a: Array, t: type, i: index
+#define ARRAY_GET(a, t, i) (*(t *)arrayGet(a, i))
 
 // Allocates a new array of size: len (n elements) * size (bytes per element)
-Array arrayNew(Allocator allocator, usize len, usize size);
+Array arrayNew(Allocator allocator, usize cap, usize size);
 
 // Creates a new array with ptr as the backing buffer
-Array arrayFromPtr(usize len, usize size, usize used, void *ptr);
+Array arrayFromPtr(usize len, usize size, void *ptr);
 
 // Creates a copy of an array
 Array arrayCopy(Allocator allocator, Array source);
 
 // Creates a copy from a raw pointer
-Array arrayCopyPtr(Allocator allocator, usize len, usize size, usize used,
-				   const void *ptr);
+Array arrayCopyPtr(Allocator allocator, usize len, usize size, const void *ptr);
 
 // Creates a new array without copying the backing data
 Array arraySlice(Array source, usize start, usize end);
 
 // Creates a new array without copying the pointer
-Array arraySlicePtr(usize start, usize end, usize used, usize size, void *ptr);
+Array arraySlicePtr(usize start, usize end, usize len, usize size, void *ptr);
 
 // Gets the element at the supplied index
 void *arrayGet(Array array, usize idx);
 
 // Inserts an element at the supplied index
-void arrayInsert(Array array, usize idx, void *data);
+void arrayInsert(Array *array, usize idx, const void *data);
 
 // Appends a new element the array, if the array has no room a new buffer will
 // be allocated
-void arrayAppend(Allocator allocator, Array *array, void *data);
+void arrayAppend(Allocator allocator, Array *array, const void *data);
 
 // Allocates a new array from the elements of the left and right arrays
 Array arrayConcat(Allocator allocator, Array left, Array right);
@@ -73,5 +76,27 @@ static inline Object arrayObject(void) {
 		.free = _arrayObjFree,
 		.compare = _arrayObjCompare,
 		.size = _arrayObjSize,
+	};
+}
+
+// Implement Iterator interface
+void *_arrayIterStart(void *ctx, i64 *cnt);
+void *_arrayIterNext(void *ctx, i64 *cnt);
+void *_arrayIterCurr(void *ctx, i64 *cnt);
+void *_arrayIterPrev(void *ctx, i64 *cnt);
+void *_arrayIterEnd(void *ctx, i64 *cnt);
+bool _arrayIterAtStart(void *ctx, i64 *cnt);
+bool _arrayIterAtEnd(void *ctx, i64 *cnt);
+static inline Iterator arrayIter(Array *array) {
+	return (Iterator){
+		.start = _arrayIterStart,
+		.next = _arrayIterNext,
+		.curr = _arrayIterCurr,
+		.prev = _arrayIterPrev,
+		.end = _arrayIterEnd,
+		.at_start = _arrayIterAtStart,
+		.at_end = _arrayIterAtEnd,
+		.ctx = array,
+		.cnt = 0,
 	};
 }

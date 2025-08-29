@@ -1,11 +1,8 @@
-#include <string.h>
-
 #include "container/map.h"
 
 Map mapNew(Allocator allocator, MapHashFn hash_fn, Object key_obj,
 		   Object data_obj) {
 	_MapBucket **base = new(allocator, _MapBucket *, MAP_INIT_SIZE);
-	memset(base, 0, sizeof(_MapBucket *));
 	return (Map){
 		.base = base,
 		.len = MAP_INIT_SIZE,
@@ -23,7 +20,7 @@ void mapInsert(Allocator allocator, Map *map, const void *key,
 	_MapBucket *bucket = new(allocator, _MapBucket, 1);
 	bucket->key = map->key_obj.clone(allocator, key);
 	bucket->data = map->data_obj.clone(allocator, data);
-	bucket->next = NULL;
+	bucket->next = nullptr;
 	if ((f32)map->collisions > (f32)map->len * MAP_COLLISION_FACTOR) {
 		map->len *= 2;
 		map->base =
@@ -51,7 +48,7 @@ void *mapGet(Map map, const void *key) {
 		}
 		curr = curr->next;
 	}
-	return NULL;
+	return nullptr;
 }
 
 void mapRemove(Allocator allocator, Map *map, const void *key) {

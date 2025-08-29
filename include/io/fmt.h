@@ -9,11 +9,17 @@ void fmtPrint(String string);
 // Print String and newline char to stdout
 void fmtPrintln(String string);
 
+// Print format string to stdout
+void fmtPrintf(const char *format, ...);
+
 // Read from stdin until encountering whitespace
 String fmtScan(Allocator allocator);
 
 // Read from stdin until encountering  a new line
 String fmtScanln(Allocator allocator);
+
+// Read format string from stdin
+void fmtScanf(const char *format, ...);
 
 // Implement IOReader interface
 String _fmtIORead(Allocator allocator, void *ctx);

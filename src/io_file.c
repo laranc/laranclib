@@ -1,10 +1,8 @@
-#include "container/string.h"
 #include "io/file.h"
-#include "mem/allocator.h"
 
 static byte *read(Allocator allocator, FILE *fd, usize *bytes) {
-	byte *buf = NULL;
-	byte *tmp = NULL;
+	byte *buf = nullptr;
+	byte *tmp = nullptr;
 	usize used = 0;
 	usize len = 0;
 	usize n = 0;
@@ -13,12 +11,12 @@ static byte *read(Allocator allocator, FILE *fd, usize *bytes) {
 			len = used + FILE_CHUNK_SIZE + 1;
 			if (len <= used) {
 				delete(allocator, buf);
-				return NULL;
+				return nullptr;
 			}
 			tmp = resize(allocator, len, buf);
 			if (!tmp) {
 				delete(allocator, buf);
-				return NULL;
+				return nullptr;
 			}
 			buf = tmp;
 		}
@@ -29,7 +27,7 @@ static byte *read(Allocator allocator, FILE *fd, usize *bytes) {
 	}
 	if (ferror(fd)) {
 		delete(allocator, buf);
-		return NULL;
+		return nullptr;
 	}
 	*bytes = used;
 	return buf;
@@ -74,7 +72,7 @@ Array fileRead(Allocator allocator, File file) {
 		return (Array){0};
 	usize len;
 	void *data = read(allocator, file.fd, &len);
-	return arrayFromPtr(len, sizeof(byte), len, data);
+	return arrayFromPtr(len, sizeof(byte), data);
 }
 
 String fileReadLine(Allocator allocator, File file) {
@@ -104,7 +102,7 @@ Array filePathReadBytes(Allocator allocator, const char *file_path) {
 	byte *data = filePathReadRaw(allocator, file_path, &len);
 	if (!data)
 		return (Array){0};
-	return arrayFromPtr(len, sizeof(byte), len, data);
+	return arrayFromPtr(len, sizeof(byte), data);
 }
 
 String filePathReadString(Allocator allocator, const char *file_path) {
@@ -135,7 +133,7 @@ usize filePathWriteString(const char *file_path, String string) {
 String _fileIORead(Allocator allocator, void *ctx) {
 	File *file = ctx;
 	Array bytes = fileRead(allocator, *file);
-	return stringFromPtr(bytes.base, bytes.used);
+	return stringFromPtr(bytes.base, bytes.len);
 }
 
 Array _fileIOReadBytes(Allocator allocator, void *ctx) {
@@ -145,8 +143,8 @@ Array _fileIOReadBytes(Allocator allocator, void *ctx) {
 
 usize _fileIOWrite(String string, void *ctx) {
 	File *file = ctx;
-	return fileWrite(
-		*file, arrayFromPtr(string.len, sizeof(char), string.len, string.base));
+	return fileWrite(*file,
+					 arrayFromPtr(string.len, sizeof(char), string.base));
 }
 
 usize _fileIOWriteBytes(Array array, void *ctx) {
