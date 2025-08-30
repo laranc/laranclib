@@ -57,6 +57,9 @@ Array stringSplit(Allocator allocator, String string, String delims);
 // Returns the lexical difference between a and b
 i32 stringCmp(String a, String b);
 
+// Returns an integer from a string
+i32 stringToInt(String string);
+
 // Allocates a new StringBuilder
 StringBuilder stringBuilderNew(Allocator allocator, usize len);
 

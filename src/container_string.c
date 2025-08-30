@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -90,15 +91,13 @@ void stringDelete(Allocator allocator, String string) {
 }
 
 void stringToLower(String string) {
-	for (usize i = 0; i < string.len; i++) {
+	for (usize i = 0; i < string.len; i++)
 		string.base[i] = tolower(string.base[i]);
-	}
 }
 
 void stringToUpper(String string) {
-	for (usize i = 0; i < string.len; i++) {
+	for (usize i = 0; i < string.len; i++)
 		string.base[i] = toupper(string.base[i]);
-	}
 }
 
 static bool isDelim(char c, String delims) {
@@ -132,17 +131,53 @@ Array stringSplit(Allocator allocator, String string, String delims) {
 }
 
 i32 stringCmp(String a, String b) {
-	if (a.len < b.len) {
+	if (a.len < b.len)
 		return -1;
-	} else if (b.len < a.len) {
+	else if (b.len < a.len)
 		return 1;
-	}
 	for (usize i = 0; i < a.len; i++) {
 		i32 diff = a.base[i] - b.base[i];
 		if (diff != 0)
 			return diff;
 	}
 	return 0;
+}
+
+static i32 parseHex(char c) {
+	if (c >= '0' && c <= '9')
+		return c - '0';
+	else if (c >= 'a' && c <= 'f')
+		return c - 'a' + 10;
+	else if (c >= 'A' && c <= 'F')
+		return c - 'A' + 10;
+	else
+		return 0;
+}
+
+i32 stringToInt(String string) {
+	i32 sign = 1;
+	i32 res = 0;
+	usize i = 0;
+	while (isspace(string.base[i]) && i < string.len)
+		i++;
+	if (string.base[i] == '0' && string.base[i + 1] == 'x') {
+		i += 2;
+		while (parseHex(string.base[i]) && i < string.len)
+			res = res * 16 + parseHex(string.base[i++]);
+	} else if (string.base[i] == '0' && string.base[i + 1] == 'b') {
+		i += 2;
+		while (i < string.len)
+			res = res * 2 + (string.base[i++] - '0');
+	} else {
+		if (string.base[i] == '-') {
+			sign = -1;
+			i++;
+		} else if (string.base[i] == '+')
+			i++;
+		while (i < string.len)
+			res = res * 10 + (string.base[i++] - '0');
+	}
+	return res * sign;
 }
 
 StringBuilder stringBuilderNew(Allocator allocator, usize len) {

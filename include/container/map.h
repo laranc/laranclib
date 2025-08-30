@@ -27,6 +27,10 @@ typedef struct map_t {
 	Object data_obj;
 } Map;
 
+// Macro shortucts
+// m: Map, t: type, k: key
+#define MAP_GET(m, t, k) (*(t *)mapGet(m, k))
+
 // Allocates the backing data for a Map
 Map mapNew(Allocator allocator, MapHashFn hash_fn, Object key_obj,
 		   Object data_obj);
